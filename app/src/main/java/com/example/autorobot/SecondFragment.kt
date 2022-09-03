@@ -1,5 +1,6 @@
 package com.example.autorobot
 
+import android.content.Context
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
@@ -19,14 +20,6 @@ class SecondFragment : Fragment() {
     private var _binding: FragmentSecondBinding? = null
 
     private var viewer: MjpegView? = null
-//    view = findViewById(R.id.mjpegid)
-//    view!!.isAdjustHeight = true
-//    view!!.mode1 = MjpegView.MODE_FIT_WIDTH
-//    view!!.setUrl("http://192.168.0.1")
-//    view!!.isRecycleBitmap1 = true
-//    view!!.startStream()
-////when user leaves application
-//    viewer!!.stopStream();
 
     // This property is only valid between onCreateView and
     // onDestroyView.
@@ -44,6 +37,17 @@ class SecondFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        val sharedPref = activity?.getSharedPreferences(
+            "ip_url_config",
+            Context.MODE_PRIVATE
+        )
+        val ipNumberFirst = sharedPref?.getInt("ipNumberFirst", 192)
+        val ipNumberSecond = sharedPref?.getInt("ipNumberSecond", 168)
+        val ipNumberThird = sharedPref?.getInt("ipNumberThird", 1)
+        val ipNumberFourth = sharedPref?.getInt("ipNumberFourth", 13)
+        val portNumber = sharedPref?.getInt("portNumber", 9000)
+        val url = sharedPref?.getString("url", "stream.mjpg")
+
         binding.buttonSecond.setOnClickListener {
             findNavController().navigate(R.id.action_SecondFragment_to_FirstFragment)
         }
@@ -51,7 +55,10 @@ class SecondFragment : Fragment() {
         viewer = view.findViewById<MjpegView>(R.id.mjpegid)
         viewer!!.isAdjustHeight = true
         viewer!!.mode1 = MjpegView.MODE_FIT_WIDTH
-        viewer!!.setUrl("http://192.168.1.14:9000/stream.mjpg")
+        viewer!!.setUrl(
+            "${ipNumberFirst}.${ipNumberSecond}.${ipNumberThird}.${ipNumberFourth}:" +
+            "${portNumber}/${url}"
+        )
         viewer!!.isRecycleBitmap1 = true
         viewer!!.startStream()
     }

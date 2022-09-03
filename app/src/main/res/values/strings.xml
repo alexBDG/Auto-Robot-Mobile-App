@@ -4,7 +4,9 @@
     <!-- Strings used for fragments for navigation -->
     <string name="first_fragment_label">First Fragment</string>
     <string name="second_fragment_label">Second Fragment</string>
+    <string name="third_fragment_label">Third Fragment</string>
     <string name="launch">Démarrer</string>
+    <string name="settings">Réglages</string>
     <string name="menu">Menu</string>
 
     <string name="main_title">Auto-Robot</string>
