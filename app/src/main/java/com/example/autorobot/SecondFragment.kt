@@ -1,21 +1,30 @@
 package com.example.autorobot
 
+import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.net.Uri
 import android.os.AsyncTask
 import android.os.Bundle
+import android.os.Environment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.autorobot.databinding.FragmentSecondBinding
-import com.faizkhan.mjpegviewer.MjpegView
-import com.fasterxml.jackson.databind.ObjectMapper
+//import com.faizkhan.mjpegviewer. //MjpegView
+import com.example.autorobot.mjpegviewer.MjpegView
 import io.github.controlwear.virtual.joystick.android.JoystickView
 import khttp.post
+import java.io.File
 import kotlin.math.abs
+
+import android.provider.Settings
+
 
 /*
 * A simple [Fragment] subclass as the second destination in the navigation.
@@ -57,7 +66,6 @@ class SecondFragment : Fragment() {
         val streamUrl = "http://${ipNumberFirst}.${ipNumberSecond}.${ipNumberThird}.${ipNumberFourth}:${portNumber}/${url}"
         // Build the command URL
         val cmdUrl = "http://${ipNumberFirst}.${ipNumberSecond}.${ipNumberThird}.${ipNumberFourth}:9500"
-//        val cmdUrl = "http://raspberry:9500/"
 
         binding.buttonSecond.setOnClickListener {
             findNavController().navigate(R.id.action_SecondFragment_to_FirstFragment)
@@ -68,7 +76,11 @@ class SecondFragment : Fragment() {
         viewer!!.mode1 = MjpegView.MODE_FIT_WIDTH
         viewer!!.setUrl(streamUrl)
         viewer!!.isRecycleBitmap1 = true
-        viewer!!.startStream()
+        try {
+            viewer!!.startStream()
+        } catch (e: Exception) {
+            println(" -- Error -- ")
+        }
 
         val joystick = view.findViewById(R.id.joystickid) as JoystickView
         joystick.setOnMoveListener { angle, strength ->
@@ -85,13 +97,16 @@ class SecondFragment : Fragment() {
 
         // when user leaves application
         viewer!!.stopStream()
+//        streamer!!.cancel(true)
 
         // disable
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         // disable full screen
         activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
     }
+
 }
+
 
 fun postData(angle: Int, strength: Int, cmdUrl: String) {
     println("angle: $angle - strength: $strength")
@@ -125,11 +140,12 @@ fun postData(angle: Int, strength: Int, cmdUrl: String) {
     )
     println("values: $values")
 
-    GetMyIP().execute(cmdUrl, values)
+    AsyncHTTP().execute(cmdUrl, values)
 
 }
 
-class  GetMyIP : AsyncTask<Any, Any, Any>()
+
+class  AsyncHTTP : AsyncTask<Any, Any, Any>()
 {
 
     override fun onPreExecute() {

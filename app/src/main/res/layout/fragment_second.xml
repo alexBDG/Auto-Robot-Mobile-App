@@ -7,7 +7,7 @@
     android:layout_height="match_parent"
     tools:context=".SecondFragment">
 
-    <com.faizkhan.mjpegviewer.MjpegView
+    <com.example.autorobot.mjpegviewer.MjpegView
         android:id="@+id/mjpegid"
         android:layout_width="wrap_content"
         android:layout_height="473dp"
