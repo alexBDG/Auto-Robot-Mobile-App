@@ -1,29 +1,24 @@
 package com.example.autorobot
 
-import android.Manifest
+//import com.faizkhan.mjpegviewer. //MjpegView
+
 import android.content.Context
-import android.content.Intent
 import android.content.pm.ActivityInfo
-import android.net.Uri
 import android.os.AsyncTask
 import android.os.Bundle
-import android.os.Environment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.autorobot.databinding.FragmentSecondBinding
-//import com.faizkhan.mjpegviewer. //MjpegView
 import com.example.autorobot.mjpegviewer.MjpegView
 import io.github.controlwear.virtual.joystick.android.JoystickView
+import khttp.get
 import khttp.post
-import java.io.File
+import khttp.responses.Response
 import kotlin.math.abs
-
-import android.provider.Settings
 
 
 /*
@@ -63,24 +58,19 @@ class SecondFragment : Fragment() {
         val portNumber = sharedPref?.getInt("portNumber", 9000)
         val url = sharedPref?.getString("url", "stream.mjpg")
         // Build this URL (for streaming)
-        val streamUrl = "http://${ipNumberFirst}.${ipNumberSecond}.${ipNumberThird}.${ipNumberFourth}:${portNumber}/${url}"
+        val hostName = "${ipNumberFirst}.${ipNumberSecond}.${ipNumberThird}.${ipNumberFourth}"
+        val indexUrl = "http://${hostName}:${portNumber}/index.html"
+        val streamUrl = "http://${hostName}:${portNumber}/${url}"
         // Build the command URL
-        val cmdUrl = "http://${ipNumberFirst}.${ipNumberSecond}.${ipNumberThird}.${ipNumberFourth}:9500"
+        val cmdUrl = "http://${hostName}:9500"
 
         binding.buttonSecond.setOnClickListener {
             findNavController().navigate(R.id.action_SecondFragment_to_FirstFragment)
         }
 
+        val testUrl = AsyncHTTPTest(streamUrl, indexUrl)
         viewer = view.findViewById(R.id.mjpegid)
-        viewer!!.isAdjustHeight = true
-        viewer!!.mode1 = MjpegView.MODE_FIT_WIDTH
-        viewer!!.setUrl(streamUrl)
-        viewer!!.isRecycleBitmap1 = true
-        try {
-            viewer!!.startStream()
-        } catch (e: Exception) {
-            println(" -- Error -- ")
-        }
+        println(testUrl.execute(viewer))
 
         val joystick = view.findViewById(R.id.joystickid) as JoystickView
         joystick.setOnMoveListener { angle, strength ->
@@ -163,5 +153,40 @@ class  AsyncHTTP : AsyncTask<Any, Any, Any>()
         super.onPostExecute(result)
         // The data you have return from doInBackground will be received here.
         // So now you can parse the result.
+    }
+}
+
+
+class AsyncHTTPTest(streamUrl: String, indexUrl: String) : AsyncTask<MjpegView, Any, Response>()
+{
+    var streamUrl = streamUrl
+    var indexUrl = indexUrl
+
+    override fun onPreExecute() {
+        super.onPreExecute()
+    }
+
+    override fun doInBackground(vararg p0: MjpegView): Response? {
+        var viewer: MjpegView? = p0[0]
+        // Make your network call here and return result
+        val response : Response = get(url = this.indexUrl)
+        val statusCode = response.statusCode
+        println("[INFO] statusCode $statusCode")
+        if (statusCode == 200) {
+            viewer!!.isAdjustHeight = true
+            viewer!!.mode1 = MjpegView.MODE_FIT_WIDTH
+            viewer!!.setUrl(this.streamUrl)
+            viewer!!.isRecycleBitmap1 = true
+            viewer!!.startStream()
+        } else {
+            println("[INFO] no stream to handle! statusCode: $statusCode")
+        }
+        return response
+    }
+
+    override fun onPostExecute(result: Response) {
+        super.onPostExecute(result)
+        val statusCode = result.statusCode
+        println("[INFO] statusCode $statusCode")
     }
 }
