@@ -6,10 +6,10 @@ import android.content.Context
 import android.content.pm.ActivityInfo
 import android.os.AsyncTask
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowManager
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.autorobot.databinding.FragmentSecondBinding
@@ -25,6 +25,7 @@ import kotlin.math.abs
 * A simple [Fragment] subclass as the second destination in the navigation.
 */
 class SecondFragment : Fragment() {
+    private val tag = "SecondFragment"
 
     private var _binding: FragmentSecondBinding? = null
 
@@ -39,7 +40,7 @@ class SecondFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
-        activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+//        activity?.window?.insetsController.hide(WindowInsets.Type.statusBars())
         _binding = FragmentSecondBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -51,6 +52,7 @@ class SecondFragment : Fragment() {
             "ip_url_config",
             Context.MODE_PRIVATE
         )
+
         val ipNumberFirst = sharedPref?.getInt("ipNumberFirst", 192)
         val ipNumberSecond = sharedPref?.getInt("ipNumberSecond", 168)
         val ipNumberThird = sharedPref?.getInt("ipNumberThird", 1)
@@ -64,13 +66,16 @@ class SecondFragment : Fragment() {
         // Build the command URL
         val cmdUrl = "http://${hostName}:9500"
 
-        binding.buttonSecond.setOnClickListener {
-            findNavController().navigate(R.id.action_SecondFragment_to_FirstFragment)
-        }
-
         val testUrl = AsyncHTTPTest(streamUrl, indexUrl)
         viewer = view.findViewById(R.id.mjpegid)
-        println(testUrl.execute(viewer))
+        testUrl.execute(viewer)
+
+        binding.buttonSecond.setOnClickListener {
+            println("[INFO] stopStream $viewer")
+            viewer?.stopStream()
+            println("[INFO] stopStream $viewer")
+            findNavController().navigate(R.id.action_SecondFragment_to_FirstFragment)
+        }
 
         val joystick = view.findViewById(R.id.joystickid) as JoystickView
         joystick.setOnMoveListener { angle, strength ->
@@ -92,14 +97,15 @@ class SecondFragment : Fragment() {
         // disable
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         // disable full screen
-        activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+//        activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
     }
 
 }
 
 
 fun postData(angle: Int, strength: Int, cmdUrl: String) {
-    println("angle: $angle - strength: $strength")
+    val tag = "postData"
+    Log.v(tag, "angle: $angle - strength: $strength")
 
     var vector = arrayOf(0, 0)
     var speedRotation = 0.0
@@ -128,7 +134,7 @@ fun postData(angle: Int, strength: Int, cmdUrl: String) {
         "speedVelocity" to strength/100.0,
         "speedRotation" to speedRotation
     )
-    println("values: $values")
+    Log.v(tag, "values: $values")
 
     AsyncHTTP().execute(cmdUrl, values)
 
@@ -137,7 +143,6 @@ fun postData(angle: Int, strength: Int, cmdUrl: String) {
 
 class  AsyncHTTP : AsyncTask<Any, Any, Any>()
 {
-
     override fun onPreExecute() {
         super.onPreExecute()
     }
@@ -159,6 +164,8 @@ class  AsyncHTTP : AsyncTask<Any, Any, Any>()
 
 class AsyncHTTPTest(streamUrl: String, indexUrl: String) : AsyncTask<MjpegView, Any, Response>()
 {
+    private val tag = "AsyncHTTPTest"
+    private var isRunning = false
     var streamUrl = streamUrl
     var indexUrl = indexUrl
 
@@ -171,15 +178,20 @@ class AsyncHTTPTest(streamUrl: String, indexUrl: String) : AsyncTask<MjpegView, 
         // Make your network call here and return result
         val response : Response = get(url = this.indexUrl)
         val statusCode = response.statusCode
-        println("[INFO] statusCode $statusCode")
-        if (statusCode == 200) {
-            viewer!!.isAdjustHeight = true
-            viewer!!.mode1 = MjpegView.MODE_FIT_WIDTH
-            viewer!!.setUrl(this.streamUrl)
-            viewer!!.isRecycleBitmap1 = true
-            viewer!!.startStream()
+        if (!isRunning) {
+            if (statusCode == 200) {
+                viewer!!.isAdjustHeight = true
+                viewer!!.mode1 = MjpegView.MODE_FIT_WIDTH
+                viewer!!.setUrl(this.streamUrl)
+                viewer!!.isRecycleBitmap1 = true
+                println("[INFO] doInBackground startStream")
+                viewer!!.startStream()
+                isRunning = true
+            } else {
+                Log.e(tag, "no stream to handle! statusCode: $statusCode")
+            }
         } else {
-            println("[INFO] no stream to handle! statusCode: $statusCode")
+            Log.e(tag, "already running")
         }
         return response
     }
@@ -187,6 +199,6 @@ class AsyncHTTPTest(streamUrl: String, indexUrl: String) : AsyncTask<MjpegView, 
     override fun onPostExecute(result: Response) {
         super.onPostExecute(result)
         val statusCode = result.statusCode
-        println("[INFO] statusCode $statusCode")
+        Log.v(tag, "statusCode $statusCode")
     }
 }

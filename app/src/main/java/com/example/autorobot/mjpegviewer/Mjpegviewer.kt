@@ -85,7 +85,9 @@ class MjpegView : View {
     }
 
     fun stopStream() {
-        foreground!!.cancel()
+        println("[INFO] stopStream isRunning: ${foreground?.isRunning}")
+        foreground?.cancel()
+        println("[INFO] stopStream isRunning: ${foreground?.isRunning}")
     }
 
     fun getMode(): Int {
@@ -303,6 +305,7 @@ class MjpegView : View {
 
         @RequiresApi(api = Build.VERSION_CODES.O)
         override fun run() {
+            println("[INFO] MjpegDownloader isRunning: $isRunning")
             while (isRunning) {
                 var connection: HttpURLConnection? = null
                 var bis: BufferedInputStream? = null
