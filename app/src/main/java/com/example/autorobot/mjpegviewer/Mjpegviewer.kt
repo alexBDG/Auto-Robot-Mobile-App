@@ -3,7 +3,6 @@ package com.example.autorobot.mjpegviewer
 import android.app.Activity
 import android.content.Context
 import android.graphics.*
-import android.os.AsyncTask
 import android.os.Build
 import android.os.Environment
 import android.util.AttributeSet
@@ -21,7 +20,7 @@ import java.time.Instant
 import java.util.concurrent.TimeUnit
 import java.util.regex.Matcher
 import java.util.regex.Pattern
-import android.os.Process
+import java.util.concurrent.Executors
 
 /*
 * Created by Faiz Khan
@@ -86,9 +85,7 @@ class MjpegView : View {
     }
 
     fun stopStream() {
-        println("[INFO] stopStream isRunning: ${foreground?.isRunning}")
         foreground?.cancel()
-        println("[INFO] stopStream isRunning: ${foreground?.isRunning}")
     }
 
     fun getMode(): Int {
@@ -102,7 +99,6 @@ class MjpegView : View {
     }
 
     fun setBitmap(bm: Bitmap?) {
-        Log.v(tag, "New frame | TID: ${Process.myTid()}| PID: ${Process.myPid()}")
         synchronized(lockBitmap) {
             if (lastBitmap != null && isUserForceConfigRecycle && isRecycleBitmap1) {
                 Log.v(tag, "Manually recycle bitmap")
@@ -262,51 +258,41 @@ class MjpegView : View {
 
         @RequiresApi(api = Build.VERSION_CODES.O) // Saving image
         fun saveImage(img: ByteArray) {
-            val asyncTask: AsyncTask<Void?, String?, Void?> =
-                object : AsyncTask<Void?, String?, Void?>() {
-                    @RequiresApi(api = Build.VERSION_CODES.O)
-                    override fun doInBackground(vararg params: Void?): Void? {
-                        val ts = Instant.now().epochSecond
-                        val dir = Environment.getExternalStorageDirectory()
-                        val folder = File("$dir/Mjpeg/")
-                        var success = true
-                        if (!folder.exists()) {
-                            success = folder.mkdirs()
-                            println("Directory is created!" + success + "    " + folder.path)
-                        }
-                        val photo =
-                            File(folder.path + "/photo_" + ts + "_" + (Math.random() * (100 + 1) + 1) + ".jpg")
-                        if (photo.exists()) {
-                            photo.delete()
-                        }
-                        try {
-                            println("Photo $photo")
-                            val fos =
-                                FileOutputStream(photo.path)
-                            println("Image_length" + img.size)
-                            //img.compress(Bitmap.CompressFormat.PNG, 100, fos);
-                            fos.write(img)
-                            fos.close()
-                            //sleepSecond();
-                        } catch (e: IOException) {
-                            Log.e("PictureDemo", "Exception in photoCallback", e)
-                        }
-                        return null
-                    }
-
-                    private fun sleepSecond() {
-                        try {
-                            TimeUnit.SECONDS.sleep(2)
-                        } catch (ignore: InterruptedException) {
-                        }
-                    }
+            val executor = Executors.newSingleThreadExecutor()
+            executor.execute {
+                val ts = Instant.now().epochSecond
+                val dir = Environment.getExternalStorageDirectory()
+                val folder = File("$dir/Mjpeg/")
+                var success = true
+                if (!folder.exists()) {
+                    success = folder.mkdirs()
+                    println("Directory is created!" + success + "    " + folder.path)
                 }
-            asyncTask.execute()
+                val photo =
+                    File(folder.path + "/photo_" + ts + "_" + (Math.random() * (100 + 1) + 1) + ".jpg")
+                if (photo.exists()) {
+                    photo.delete()
+                }
+                try {
+                    println("Photo $photo")
+                    val fos =
+                        FileOutputStream(photo.path)
+                    println("Image_length" + img.size)
+                    //img.compress(Bitmap.CompressFormat.PNG, 100, fos);
+                    fos.write(img)
+                    fos.close()
+//                    try {
+//                        TimeUnit.SECONDS.sleep(2)
+//                    } catch (ignore: InterruptedException) {
+//                    }
+                } catch (e: IOException) {
+                    Log.e("PictureDemo", "Exception in photoCallback", e)
+                }
+            }
         }
 
         @RequiresApi(api = Build.VERSION_CODES.O)
         override fun run() {
-            println("[INFO] MjpegDownloader isRunning: $isRunning")
             while (isRunning) {
                 var connection: HttpURLConnection? = null
                 var bis: BufferedInputStream? = null

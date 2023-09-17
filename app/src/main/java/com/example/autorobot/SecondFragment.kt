@@ -4,12 +4,19 @@ package com.example.autorobot
 
 import android.content.Context
 import android.content.pm.ActivityInfo
-import android.os.AsyncTask
+import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.Window
+import android.view.WindowManager
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.autorobot.databinding.FragmentSecondBinding
@@ -18,6 +25,7 @@ import io.github.controlwear.virtual.joystick.android.JoystickView
 import khttp.get
 import khttp.post
 import khttp.responses.Response
+import java.util.concurrent.Executors
 import kotlin.math.abs
 
 
@@ -40,7 +48,7 @@ class SecondFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
-//        activity?.window?.insetsController.hide(WindowInsets.Type.statusBars())
+        activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
         _binding = FragmentSecondBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -66,14 +74,34 @@ class SecondFragment : Fragment() {
         // Build the command URL
         val cmdUrl = "http://${hostName}:9500"
 
-        val testUrl = AsyncHTTPTest(streamUrl, indexUrl)
         viewer = view.findViewById(R.id.mjpegid)
-        testUrl.execute(viewer)
+
+        val executorViewer = Executors.newSingleThreadExecutor()
+        val handlerViewer = Handler(Looper.getMainLooper())
+        executorViewer.execute {
+            var statusCode = 0
+            try {
+                val response : Response = get(url = indexUrl, timeout = 0.1)
+                statusCode = response.statusCode
+            } catch (e: Exception) {
+                Log.e(tag, "${e.message}")
+            }
+            if (statusCode == 200) {
+                viewer!!.isAdjustHeight = true
+                viewer!!.mode1 = MjpegView.MODE_FIT_HEIGHT
+                viewer!!.setUrl(streamUrl)
+                viewer!!.isRecycleBitmap1 = true
+                viewer!!.startStream()
+            } else {
+                Log.e(tag, "no stream to handle! statusCode: $statusCode")
+            }
+
+            handlerViewer.post {
+                Log.v(tag, "statusCode $statusCode")
+            }
+        }
 
         binding.buttonSecond.setOnClickListener {
-            println("[INFO] stopStream $viewer")
-            viewer?.stopStream()
-            println("[INFO] stopStream $viewer")
             findNavController().navigate(R.id.action_SecondFragment_to_FirstFragment)
         }
 
@@ -92,14 +120,12 @@ class SecondFragment : Fragment() {
 
         // when user leaves application
         viewer!!.stopStream()
-//        streamer!!.cancel(true)
 
         // disable
-        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         // disable full screen
-//        activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
     }
-
 }
 
 
@@ -134,76 +160,15 @@ fun postData(angle: Int, strength: Int, cmdUrl: String) {
         "speedVelocity" to strength/100.0,
         "speedRotation" to speedRotation
     )
-    Log.v(tag, "values: $values")
 
-    AsyncHTTP().execute(cmdUrl, values)
-
-}
-
-
-class  AsyncHTTP : AsyncTask<Any, Any, Any>()
-{
-    override fun onPreExecute() {
-        super.onPreExecute()
-    }
-
-    override fun doInBackground(vararg params: Any?) {
-        val url = params[0].toString()
-        var data = params[1]
-        // Make your network call here and return result
-        post(url = url, json = data)
-    }
-
-    override fun onPostExecute(result: Any?) {
-        super.onPostExecute(result)
-        // The data you have return from doInBackground will be received here.
-        // So now you can parse the result.
-    }
-}
-
-
-class AsyncHTTPTest(streamUrl: String, indexUrl: String) : AsyncTask<MjpegView, Any, Int>()
-{
-    private val tag = "AsyncHTTPTest"
-    private var isRunning = false
-    var streamUrl = streamUrl
-    var indexUrl = indexUrl
-
-    override fun onPreExecute() {
-        super.onPreExecute()
-    }
-
-    override fun doInBackground(vararg p0: MjpegView): Int? {
-        var viewer: MjpegView? = p0[0]
-        // Make your network call here and return result
-        var statusCode = 0
+    val executorPost = Executors.newSingleThreadExecutor()
+    executorPost.execute {
         try {
-            val response : Response = get(url = this.indexUrl, timeout = 0.1)
-            statusCode = response.statusCode
+            post(url = cmdUrl, json = values, timeout = 0.1)
+            Log.v(tag, "values: $values")
         } catch (e: Exception) {
             Log.e(tag, "${e.message}")
-            statusCode = 0
         }
-        if (!isRunning) {
-            if (statusCode == 200) {
-                viewer!!.isAdjustHeight = true
-                viewer!!.mode1 = MjpegView.MODE_FIT_WIDTH
-                viewer!!.setUrl(this.streamUrl)
-                viewer!!.isRecycleBitmap1 = true
-                println("[INFO] doInBackground startStream")
-                viewer!!.startStream()
-                isRunning = true
-            } else {
-                Log.e(tag, "no stream to handle! statusCode: $statusCode")
-            }
-        } else {
-            Log.e(tag, "already running")
-        }
-        return statusCode
     }
 
-    override fun onPostExecute(statusCode: Int) {
-        super.onPostExecute(statusCode)
-        Log.v(tag, "statusCode $statusCode")
-    }
 }
