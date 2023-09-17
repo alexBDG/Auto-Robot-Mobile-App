@@ -21,6 +21,7 @@ import java.time.Instant
 import java.util.concurrent.TimeUnit
 import java.util.regex.Matcher
 import java.util.regex.Pattern
+import android.os.Process
 
 /*
 * Created by Faiz Khan
@@ -101,7 +102,7 @@ class MjpegView : View {
     }
 
     fun setBitmap(bm: Bitmap?) {
-        Log.v(tag, "New frame")
+        Log.v(tag, "New frame | TID: ${Process.myTid()}| PID: ${Process.myPid()}")
         synchronized(lockBitmap) {
             if (lastBitmap != null && isUserForceConfigRecycle && isRecycleBitmap1) {
                 Log.v(tag, "Manually recycle bitmap")

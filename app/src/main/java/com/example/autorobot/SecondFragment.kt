@@ -162,7 +162,7 @@ class  AsyncHTTP : AsyncTask<Any, Any, Any>()
 }
 
 
-class AsyncHTTPTest(streamUrl: String, indexUrl: String) : AsyncTask<MjpegView, Any, Response>()
+class AsyncHTTPTest(streamUrl: String, indexUrl: String) : AsyncTask<MjpegView, Any, Int>()
 {
     private val tag = "AsyncHTTPTest"
     private var isRunning = false
@@ -173,11 +173,17 @@ class AsyncHTTPTest(streamUrl: String, indexUrl: String) : AsyncTask<MjpegView, 
         super.onPreExecute()
     }
 
-    override fun doInBackground(vararg p0: MjpegView): Response? {
+    override fun doInBackground(vararg p0: MjpegView): Int? {
         var viewer: MjpegView? = p0[0]
         // Make your network call here and return result
-        val response : Response = get(url = this.indexUrl)
-        val statusCode = response.statusCode
+        var statusCode = 0
+        try {
+            val response : Response = get(url = this.indexUrl, timeout = 0.1)
+            statusCode = response.statusCode
+        } catch (e: Exception) {
+            Log.e(tag, "${e.message}")
+            statusCode = 0
+        }
         if (!isRunning) {
             if (statusCode == 200) {
                 viewer!!.isAdjustHeight = true
@@ -193,12 +199,11 @@ class AsyncHTTPTest(streamUrl: String, indexUrl: String) : AsyncTask<MjpegView, 
         } else {
             Log.e(tag, "already running")
         }
-        return response
+        return statusCode
     }
 
-    override fun onPostExecute(result: Response) {
-        super.onPostExecute(result)
-        val statusCode = result.statusCode
+    override fun onPostExecute(statusCode: Int) {
+        super.onPostExecute(statusCode)
         Log.v(tag, "statusCode $statusCode")
     }
 }
