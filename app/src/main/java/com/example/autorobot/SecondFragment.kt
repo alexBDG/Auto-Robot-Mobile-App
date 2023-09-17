@@ -138,20 +138,20 @@ fun postData(angle: Int, strength: Int, cmdUrl: String) {
     if (strength>0) {
         when (angle) {
             in 0..90 -> {
-                vector = arrayOf(1, -1)
-                speedRotation = abs(angle - 90) /90.0
+                vector = arrayOf(1, 1)
+                speedRotation = abs(angle - 90) / 90.0
             }
             in 90..180 -> {
-                vector = arrayOf(-1, -1)
-                speedRotation = abs(angle - 90) /90.0
+                vector = arrayOf(-1, 1)
+                speedRotation = abs(angle - 90) / 90.0
             }
             in 180..270 -> {
-                vector = arrayOf(-1, 1)
-                speedRotation = abs(angle - 270) /90.0
+                vector = arrayOf(-1, -1)
+                speedRotation = abs(angle - 270) / 90.0
             }
             else -> {
-                vector = arrayOf(1, 1)
-                speedRotation = abs(angle - 270) /90.0
+                vector = arrayOf(1, -1)
+                speedRotation = abs(angle - 270) / 90.0
             }
         }
     }
