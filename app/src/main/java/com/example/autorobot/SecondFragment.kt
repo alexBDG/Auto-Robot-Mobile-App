@@ -4,19 +4,17 @@ package com.example.autorobot
 
 import android.content.Context
 import android.content.pm.ActivityInfo
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
+import android.view.View.OnTouchListener
 import android.view.ViewGroup
-import android.view.Window
 import android.view.WindowManager
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
+import android.widget.ImageButton
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.autorobot.databinding.FragmentSecondBinding
@@ -112,6 +110,35 @@ class SecondFragment : Fragment() {
             binding.angleid.setText("Angle: $angle°")
             postData(angle, strength, cmdUrl)
         }
+
+        val stopButton = view.findViewById(R.id.stopid) as ImageButton
+        stopButton.setOnTouchListener(object : OnTouchListener {
+            private var mHandler: Handler? = null
+            override fun onTouch(v: View, event: MotionEvent): Boolean {
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        if (mHandler != null) return true
+                        mHandler = Handler()
+                        mHandler!!.postDelayed(mAction, 100)
+                    }
+
+                    MotionEvent.ACTION_UP -> {
+                        if (mHandler == null) return true
+                        mHandler!!.removeCallbacks(mAction)
+                        mHandler = null
+                    }
+                }
+                return false
+            }
+
+            var mAction: Runnable = object : Runnable {
+                override fun run() {
+                    postData(0, 0, cmdUrl)
+                    mHandler!!.postDelayed(this, 100)
+                }
+            }
+        })
+
     }
 
     override fun onDestroyView() {
